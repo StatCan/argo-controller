@@ -125,7 +125,7 @@ var rbacCmd = &cobra.Command{
 				for _, secret := range secrets {
 					currentSecret, err := secretsLister.Secrets(secret.Namespace).Get(secret.Name)
 					if errors.IsNotFound(err) {
-						klog.Infof("creating service account %s/%s", secret.Namespace, secret.Name)
+						klog.Infof("creating secret %s/%s", secret.Namespace, secret.Name)
 						currentSecret, err = kubeClient.CoreV1().Secrets(secret.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 						if err != nil {
 							return err
@@ -271,12 +271,13 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      namespace.Name,
+			Name:      os.Getenv("ARGO_SECRET_NAME"),
 			Namespace: namespace.Name,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"key": []byte(os.Getenv("argo_storage_key")),
+			"storageAccountName": []byte(os.Getenv("ARGO_STORAGE_ACCOUNT_NAME")),
+			"storageAccountKey":  []byte(os.Getenv("ARGO_STORAGE_ACCOUNT_KEY")),
 		},
 	}
 
