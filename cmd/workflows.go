@@ -248,7 +248,7 @@ func generateRoleBindings(namespace *corev1.Namespace) []*rbacv1.RoleBinding {
 		},
 		Subjects: []rbacv1.Subject{
 			{
-				APIGroup:  "rbac.authorization.k8s.io",
+				APIGroup:  "",
 				Kind:      "ServiceAccount",
 				Name:      fmt.Sprintf("argo-workflows-%v", namespace.Name),
 				Namespace: namespace.Name,
