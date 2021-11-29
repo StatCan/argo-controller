@@ -222,7 +222,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("argo-workflows-%v", namespace.Name),
-			Namespace:   namespace.Namespace,
+			Namespace:   namespace.Name,
 			Annotations: map[string]string{"workflows.argoproj.io/rbac-rules": fmt.Sprintf("'%s' in groups", roleBinding.Subjects[0].Name)},
 		},
 	}
@@ -239,7 +239,7 @@ func generateRoleBindings(namespace *corev1.Namespace) []*rbacv1.RoleBinding {
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("argo-workflows-%v", namespace.Name),
-			Namespace: namespace.Namespace,
+			Namespace: namespace.Name,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
@@ -272,7 +272,7 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespace.Name,
-			Namespace: namespace.Namespace,
+			Namespace: namespace.Name,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
