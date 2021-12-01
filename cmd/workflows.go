@@ -219,15 +219,22 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		return nil, err
 	}
 
-	serviceAccount := &corev1.ServiceAccount{
+	// Service account for UI access
+	serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("argo-workflows-%v", namespace.Name),
 			Namespace:   workflowsSystemNamespace,
 			Annotations: map[string]string{"workflows.argoproj.io/rbac-rules": fmt.Sprintf("'%s' in groups", roleBinding.Subjects[0].Name)},
 		},
-	}
+	})
 
-	serviceAccounts = append(serviceAccounts, serviceAccount)
+	// Service account for workflows
+	serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "argo-workflows",
+			Namespace: namespace.Name,
+		},
+	})
 
 	return serviceAccounts, nil
 }
@@ -236,7 +243,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 func generateRoleBindings(namespace *corev1.Namespace) []*rbacv1.RoleBinding {
 	roleBindings := []*rbacv1.RoleBinding{}
 
-	roleBinding := &rbacv1.RoleBinding{
+	roleBindings = append(roleBindings, &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("argo-workflows-%v", namespace.Name),
 			Namespace: namespace.Name,
@@ -254,9 +261,27 @@ func generateRoleBindings(namespace *corev1.Namespace) []*rbacv1.RoleBinding {
 				Namespace: workflowsSystemNamespace,
 			},
 		},
-	}
+	})
 
-	roleBindings = append(roleBindings, roleBinding)
+	roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "argo-workflows",
+			Namespace: namespace.Name,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "ClusterRole",
+			Name:     "argo-workflows-workflow",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				APIGroup:  "",
+				Kind:      "ServiceAccount",
+				Name:      "argo-workflows",
+				Namespace: namespace.Name,
+			},
+		},
+	})
 
 	return roleBindings
 }
