@@ -22,7 +22,7 @@ import (
 	"k8s.io/klog"
 )
 
-var rbacSupportGroups []string
+var workflowsSystemNamespace string
 
 var rbacCmd = &cobra.Command{
 	Use:   "workflows",
@@ -222,7 +222,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("argo-workflows-%v", namespace.Name),
-			Namespace:   namespace.Name,
+			Namespace:   workflowsSystemNamespace,
 			Annotations: map[string]string{"workflows.argoproj.io/rbac-rules": fmt.Sprintf("'%s' in groups", roleBinding.Subjects[0].Name)},
 		},
 	}
@@ -251,7 +251,7 @@ func generateRoleBindings(namespace *corev1.Namespace) []*rbacv1.RoleBinding {
 				APIGroup:  "",
 				Kind:      "ServiceAccount",
 				Name:      fmt.Sprintf("argo-workflows-%v", namespace.Name),
-				Namespace: namespace.Name,
+				Namespace: workflowsSystemNamespace,
 			},
 		},
 	}
@@ -287,7 +287,7 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 }
 
 func init() {
-	rbacCmd.Flags().StringSliceVar(&rbacSupportGroups, "support-groups", []string{}, "List of groups assigned support permissions (comma separated or multiple args).")
+	rbacCmd.Flags().StringVar(&workflowsSystemNamespace, "workflows-system-namespace", "argo-workflows-system", "Name of the namespace containing work workflows server.")
 
 	rootCmd.AddCommand(rbacCmd)
 }
