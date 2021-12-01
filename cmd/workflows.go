@@ -276,8 +276,8 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"storageAccountName": []byte(os.Getenv("ARGO_STORAGE_ACCOUNT_NAME")),
-			"storageAccountKey":  []byte(os.Getenv("ARGO_STORAGE_ACCOUNT_KEY")),
+			"root-user":     []byte(os.Getenv("ARGO_STORAGE_ACCOUNT_NAME")),
+			"root-password": []byte(os.Getenv("ARGO_STORAGE_ACCOUNT_KEY")),
 		},
 	}
 
