@@ -224,7 +224,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("argo-workflows-%v", namespace.Name),
 			Namespace:   workflowsSystemNamespace,
-			Annotations: map[string]string{"workflows.argoproj.io/rbac-rules": fmt.Sprintf("'%s' in groups", roleBinding.Subjects[0].Name)},
+			Annotations: map[string]string{"workflows.argoproj.io/rbac-rule": fmt.Sprintf("'%s' in groups", roleBinding.Subjects[0].Name)},
 		},
 	})
 
