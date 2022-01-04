@@ -68,9 +68,9 @@ func NewController(
 	klog.Info("configuring event handlers")
 
 	serviceAccountInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.EnqueueNamespace,
+		AddFunc: controller.EnqueueServiceAccount,
 		UpdateFunc: func(old, new interface{}) {
-			controller.EnqueueNamespace(new)
+			controller.EnqueueServiceAccount(new)
 		},
 	})
 
@@ -95,7 +95,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	}
 
 	klog.Info("starting workers")
-	// Launch two workers to process Namespace resources
+	// Launch two workers to process ServiceAccount resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -136,7 +136,7 @@ func (c *Controller) processNextWorkItem() bool {
 		var key string
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
+		// form serviceaccount/name. We do this as the delayed nature of the
 		// workqueue means the items in the informer cache may actually be
 		// more up to date that when the item was initially put onto the
 		// workqueue.
@@ -148,8 +148,8 @@ func (c *Controller) processNextWorkItem() bool {
 			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		// Run the syncHandler, passing it the namespace/name string of the
-		// Namespace resource to be synced.
+		// Run the syncHandler, passing it the serviceaccount/name string of the
+		// ServiceAccount resource to be synced.
 		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)
@@ -171,15 +171,15 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Namespace resource
+// converge the two. It then updates the Status block of the ServiceAccount resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	// Get the Namespace resource with this namespace/name
+	// Get the ServiceAccount resource with this serviceaccount/name
 	components := strings.Split(key, "/")
 
 	serviceAccount, err := c.serviceAccountLister.ServiceAccounts(components[0]).Get(components[1])
 	if err != nil {
-		// The Namespace resource may no longer exist, in which case we stop
+		// The ServiceAccount resource may no longer exist, in which case we stop
 		// processing.
 		if errors.IsNotFound(err) {
 			utilruntime.HandleError(fmt.Errorf("service account '%s' in work queue no longer exists", key))
@@ -192,10 +192,10 @@ func (c *Controller) syncHandler(key string) error {
 	return c.sync(serviceAccount)
 }
 
-// EnqueueNamespace takes a Namespace resource and converts it into a namespace/name
+// EnqueueServiceAccount takes a ServiceAccount resource and converts it into a serviceaccount/name
 // string which is then put onto the work queue. This method should *not* be
-// passed resources of any type other than Namespace.
-func (c *Controller) EnqueueNamespace(obj interface{}) {
+// passed resources of any type other than ServiceAccount.
+func (c *Controller) EnqueueServiceAccount(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -206,9 +206,9 @@ func (c *Controller) EnqueueNamespace(obj interface{}) {
 }
 
 // HandleObject will take any resource implementing metav1.Object and attempt
-// to find the Namespace resource that 'owns' it. It does this by looking at the
+// to find the ServiceAccount resource that 'owns' it. It does this by looking at the
 // objects metadata.ownerReferences field for an appropriate OwnerReference.
-// It then enqueues that Namespace resource to be processed. If the object does not
+// It then enqueues that ServiceAccount resource to be processed. If the object does not
 // have an appropriate OwnerReference, it will simply be skipped.
 func (c *Controller) HandleObject(obj interface{}) {
 	var object metav1.Object
@@ -228,19 +228,19 @@ func (c *Controller) HandleObject(obj interface{}) {
 	}
 	klog.V(4).Infof("Processing object: %s", object.GetName())
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
-		// If this object is not owned by a Namespace, we should not do anything more
+		// If this object is not owned by a ServiceAccount, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "Namespace" {
+		if ownerRef.Kind != "ServiceAccount" {
 			return
 		}
 
-		namespace, err := c.serviceAccountLister.ServiceAccounts(object.GetNamespace()).Get(ownerRef.Name)
+		serviceaccount, err := c.serviceAccountLister.ServiceAccounts(object.GetNamespace()).Get(ownerRef.Name)
 		if err != nil {
-			klog.V(4).Infof("ignoring orphaned object '%s' of namespace '%s'", object.GetSelfLink(), ownerRef.Name)
+			klog.V(4).Infof("ignoring orphaned object '%s' of serviceaccount '%s'", object.GetSelfLink(), ownerRef.Name)
 			return
 		}
 
-		c.EnqueueNamespace(namespace)
+		c.EnqueueServiceAccount(serviceaccount)
 		return
 	}
 }
