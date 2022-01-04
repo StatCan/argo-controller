@@ -53,14 +53,17 @@ var imagePullSecretsCmd = &cobra.Command{
 					for _, imagePullSecret := range serviceAccount.ImagePullSecrets {
 						if imagePullSecret.Name == imagePullSecretName {
 							found = true
+							break
 						}
 					}
 
 					if !found {
+						klog.Infof("Adding image pull secret to %s/%s", serviceAccount.Namespace, serviceAccount.Name)
+
 						// Add the image pull secret
 						updated := serviceAccount.DeepCopy()
 						updated.ImagePullSecrets = append(serviceAccount.ImagePullSecrets, corev1.LocalObjectReference{Name: imagePullSecretName})
-						if _, err := kubeClient.CoreV1().ServiceAccounts(serviceAccount.Name).Update(context.Background(), updated, metav1.UpdateOptions{}); err != nil {
+						if _, err := kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(context.Background(), updated, metav1.UpdateOptions{}); err != nil {
 							return err
 						}
 					}
