@@ -24,7 +24,7 @@ import (
 
 var workflowsSystemNamespace string
 
-var rbacCmd = &cobra.Command{
+var workflowsCmd = &cobra.Command{
 	Use:   "workflows",
 	Short: "Configure access control resources for Argo Workflows",
 	Long:  `Configure access control resources for Argo Workflows.`,
@@ -312,7 +312,7 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 }
 
 func init() {
-	rbacCmd.Flags().StringVar(&workflowsSystemNamespace, "workflows-system-namespace", "argo-workflows-system", "Name of the namespace containing work workflows server.")
+	workflowsCmd.Flags().StringVar(&workflowsSystemNamespace, "workflows-system-namespace", "argo-workflows-system", "Name of the namespace containing work workflows server.")
 
-	rootCmd.AddCommand(rbacCmd)
+	rootCmd.AddCommand(workflowsCmd)
 }
