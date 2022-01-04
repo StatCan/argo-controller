@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"time"
 
-	"github.com/StatCan/argo-controller/pkg/controllers/namespaces"
+	"github.com/StatCan/argo-controller/pkg/controllers/serviceaccounts"
 	"github.com/StatCan/argo-controller/pkg/signals"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -14,12 +16,12 @@ import (
 	"k8s.io/klog"
 )
 
-var cdSystemNamespace string
+var imagePullSecretName string
 
-var cdCmd = &cobra.Command{
-	Use:   "workflows",
-	Short: "Configure access control resources for Argo CD",
-	Long:  `Configure access control resources for Argo CD.`,
+var imagePullSecretsCmd = &cobra.Command{
+	Use:   "image-pull-secrets",
+	Short: "Configure image pull secrets for Argo resources",
+	Long:  `Configure image pull secrets for Argo resources`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Setup signals so we can shutdown cleanly
 		stopCh := signals.SetupSignalHandler()
@@ -38,31 +40,38 @@ var cdCmd = &cobra.Command{
 		// Setup informers
 		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Minute*5)
 
-		// Namespaces informer
-		namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
-		// namespaceLister := namespaceInformer.Lister()
-
 		// Serviceaccount informer
 		serviceAccountsInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
-		serviceAccountsLister := serviceAccountsInformer.Lister()
-
-		// Rolebinding informer
-		roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
-		roleBindingLister := roleBindingInformer.Lister()
-
-		// Secrets informer
-		secretsInformer := kubeInformerFactory.Core().V1().Secrets()
-		secretsLister := secretsInformer.Lister()
+		// serviceAccountsLister := serviceAccountsInformer.Lister()
 
 		// Setup controller
-		controller := namespaces.NewController(
-			namespaceInformer,
-			func(namespace *corev1.Namespace) error {
+		controller := serviceaccounts.NewController(
+			serviceAccountsInformer,
+			func(serviceAccount *corev1.ServiceAccount) error {
+				if val, ok := serviceAccount.Labels["app.kubernetes.io/part-of"]; ok && val == "argocd" {
+					found := false
+					for _, imagePullSecret := range serviceAccount.ImagePullSecrets {
+						if imagePullSecret.Name == imagePullSecretName {
+							found = true
+						}
+					}
 
+					if !found {
+						// Add the image pull secret
+						updated := serviceAccount.DeepCopy()
+						updated.ImagePullSecrets = append(serviceAccount.ImagePullSecrets, corev1.LocalObjectReference{Name: imagePullSecretName})
+						if _, err := kubeClient.CoreV1().ServiceAccounts(serviceAccount.Name).Update(context.Background(), updated, metav1.UpdateOptions{}); err != nil {
+							return err
+						}
+					}
+				}
+
+				return nil
 			},
 		)
 
 		serviceAccountsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc: controller.HandleObject,
 			UpdateFunc: func(old, new interface{}) {
 				newNP := new.(*corev1.ServiceAccount)
 				oldNP := old.(*corev1.ServiceAccount)
@@ -73,7 +82,6 @@ var cdCmd = &cobra.Command{
 
 				controller.HandleObject(new)
 			},
-			DeleteFunc: controller.HandleObject,
 		})
 
 		// Start informers
@@ -93,7 +101,7 @@ var cdCmd = &cobra.Command{
 }
 
 func init() {
-	cdCmd.Flags().StringVar(&cdSystemNamespace, "cd-system-namespace", "argo-cd-system", "Name of the namespace containing Argo CD server.")
+	imagePullSecretsCmd.Flags().StringVar(&imagePullSecretName, "image-pull-secret", "image-pull-secret", "Name of the secret containing the image pull credentials.")
 
-	rootCmd.AddCommand(cdCmd)
+	rootCmd.AddCommand(imagePullSecretsCmd)
 }
