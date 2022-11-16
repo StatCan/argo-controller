@@ -207,7 +207,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 	serviceAccounts := []*corev1.ServiceAccount{}
 
 	if namespace.Name == "argo-workflows-system" {
-	    return []*rbacv1.RoleBinding{}, nil
+		return []*corev1.ServiceAccount{}, nil
    }
 
 	// Find groups in namespace-admins rolebindings
