@@ -225,7 +225,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 	})
 
 	// The service accounts of type group used for user interface access
-	for i, subject := range roleBinding.Subjects {
+	for _, subject := range roleBinding.Subjects {
 		if subject.Kind == "Group" {
 			serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
@@ -233,7 +233,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 					Namespace:   namespace.Name,
 					Annotations: map[string]string{
 						"workflows.argoproj.io/rbac-rule": fmt.Sprintf("'%s' in groups", subject.Name),
-						"workflows.argoproj.io/rbac-rule-precedence": fmt.Sprintf("%d", i),
+						"workflows.argoproj.io/rbac-rule-precedence": "1",
 					},
 				},
 			})
