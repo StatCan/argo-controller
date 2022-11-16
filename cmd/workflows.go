@@ -46,7 +46,6 @@ var workflowsCmd = &cobra.Command{
 
 		// Namespaces informer
 		namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
-		// namespaceLister := namespaceInformer.Lister()
 
 		// Serviceaccount informer
 		serviceAccountsInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
@@ -207,7 +206,7 @@ var workflowsCmd = &cobra.Command{
 func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbacv1listers.RoleBindingLister) ([]*corev1.ServiceAccount, error) {
 	serviceAccounts := []*corev1.ServiceAccount{}
 
-	// Find groups in the namespace admins
+	// Find groups in namespace-admins rolebindings
 	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -217,8 +216,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		return nil, err
 	}
 
-
-	// The default service account
+	// Setup the default service account
 	serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "user-default-login",
@@ -230,7 +228,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		},
 	})
 
-	// Service account for argo-workflows itself
+	// The service account for argo-workflows itself
 	serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "argo-workflows",
@@ -238,7 +236,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		},
 	})
 
-	// Service account for UI access
+	// The service accounts of type group used for user interface access
 	for i, subject := range roleBinding.Subjects {
 		if subject.Kind == "Group" {
 			serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
@@ -271,6 +269,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 		return nil, err
 	}
 
+	// Loop over all admin groups and create a role binding for them
 	for _, subject := range roleBinding.Subjects {
 		if subject.Kind == "Group" {
 			roleBindings = append(roleBindings, &rbacv1.RoleBinding{
@@ -295,6 +294,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 		}
 	}
 
+	// Role binding for Argo Workflows
 	roleBindings = append(roleBindings, &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "argo-workflows",
