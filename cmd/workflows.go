@@ -247,6 +247,10 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1listers.RoleBindingLister) ([]*rbacv1.RoleBinding, error) {
 	roleBindings := []*rbacv1.RoleBinding{}
 
+	if namespace.Name == "argo-workflows-system" {
+          return []*rbacv1.RoleBinding{}, nil
+	}
+
 	// Find groups in the namespace admins
 	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
 	if err != nil {
@@ -275,7 +279,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 						APIGroup:  "",
 						Kind:      "ServiceAccount",
 						Name:      fmt.Sprintf("argo-workflows-%v", subject.Name),
-						Namespace: subject.Name,
+						Namespace: namespace.Name,
 					},
 				},
 			})
