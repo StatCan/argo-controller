@@ -216,19 +216,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		return nil, err
 	}
 
-	// Setup the default service account
-	serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "user-default-login",
-			Namespace: namespace.Name,
-			Annotations: map[string]string{
-				"workflows.argoproj.io/rbac-rule": "true",
-				"workflows.argoproj.io/rbac-rule-precedence": "0",
-			},
-		},
-	})
-
-	// The service account for argo-workflows itself
+	// The service account that the workflow pods will be attached to
 	serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "argo-workflows",
@@ -269,7 +257,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 		return nil, err
 	}
 
-	// Loop over all admin groups and create a role binding for them
+	// Loop over all admin groups and bind the UI service accounts to the argo-workflows-namespace role.
 	for _, subject := range roleBinding.Subjects {
 		if subject.Kind == "Group" {
 			roleBindings = append(roleBindings, &rbacv1.RoleBinding{
