@@ -206,6 +206,10 @@ var workflowsCmd = &cobra.Command{
 func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbacv1listers.RoleBindingLister) ([]*corev1.ServiceAccount, error) {
 	serviceAccounts := []*corev1.ServiceAccount{}
 
+	if namespace.Name == "argo-workflows-system" {
+	    return []*rbacv1.RoleBinding{}, nil
+   }
+
 	// Find groups in namespace-admins rolebindings
 	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
 	if err != nil {
@@ -246,10 +250,6 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 // generateRoleBindings generates role bindings for argo workflows.
 func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1listers.RoleBindingLister) ([]*rbacv1.RoleBinding, error) {
 	roleBindings := []*rbacv1.RoleBinding{}
-
-	if namespace.Name == "argo-workflows-system" {
-          return []*rbacv1.RoleBinding{}, nil
-	}
 
 	// Find groups in the namespace admins
 	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
