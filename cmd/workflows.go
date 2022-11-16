@@ -262,7 +262,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 		if subject.Kind == "Group" {
 			roleBindings = append(roleBindings, &rbacv1.RoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("argo-workflows-%v", namespace.Name),
+					Name:      fmt.Sprintf("argo-workflows-%v", subject.Name),
 					Namespace: namespace.Name,
 				},
 				RoleRef: rbacv1.RoleRef{
