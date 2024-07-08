@@ -22,6 +22,8 @@ import (
 	"k8s.io/klog"
 )
 
+var namespaceAdminsRB string
+
 var workflowsCmd = &cobra.Command{
 	Use:   "workflows",
 	Short: "Configure access control resources for Argo Workflows",
@@ -208,10 +210,10 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 
 	if namespace.Name == "argo-workflows-system" {
 		return []*corev1.ServiceAccount{}, nil
-   }
+	}
 
 	// Find groups in namespace-admins rolebindings
-	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
+	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get(namespaceAdminsRB)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return []*corev1.ServiceAccount{}, nil
@@ -233,10 +235,10 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		if subject.Kind == "Group" {
 			serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        fmt.Sprintf("argo-workflows-%v", subject.Name),
-					Namespace:   namespace.Name,
+					Name:      fmt.Sprintf("argo-workflows-%v", subject.Name),
+					Namespace: namespace.Name,
 					Annotations: map[string]string{
-						"workflows.argoproj.io/rbac-rule": fmt.Sprintf("'%s' in groups", subject.Name),
+						"workflows.argoproj.io/rbac-rule":            fmt.Sprintf("'%s' in groups", subject.Name),
 						"workflows.argoproj.io/rbac-rule-precedence": "1",
 					},
 				},
@@ -252,7 +254,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 	roleBindings := []*rbacv1.RoleBinding{}
 
 	// Find groups in the namespace admins
-	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
+	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get(namespaceAdminsRB)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return []*rbacv1.RoleBinding{}, nil
@@ -337,4 +339,6 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 
 func init() {
 	rootCmd.AddCommand(workflowsCmd)
+	workflowsCmd.Flags().StringVar(&namespaceAdminsRB, "namespace-admin-role-binding", "", "The name of the role binding that specifies the namespace admins")
+	workflowsCmd.MarkFlagRequired("namespace-admin-role-binding")
 }
