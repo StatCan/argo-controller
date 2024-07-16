@@ -23,6 +23,8 @@ import (
 )
 
 var namespaceAdminsRB string
+var argoUserInterfaceCR string
+var workflowsCR string
 
 var workflowsCmd = &cobra.Command{
 	Use:   "workflows",
@@ -274,7 +276,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: rbacv1.SchemeGroupVersion.Group,
 					Kind:     "ClusterRole",
-					Name:     "argo-workflows-namespace",
+					Name:     argoUserInterfaceCR,
 				},
 				Subjects: []rbacv1.Subject{
 					{
@@ -297,7 +299,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 			Kind:     "ClusterRole",
-			Name:     "argo-workflows-workflow",
+			Name:     workflowsCR,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -339,6 +341,11 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 
 func init() {
 	rootCmd.AddCommand(workflowsCmd)
-	workflowsCmd.Flags().StringVar(&namespaceAdminsRB, "namespace-admin-role-binding", "", "The name of the role binding that specifies the namespace admins")
+	workflowsCmd.Flags().StringVar(&namespaceAdminsRB, "namespace-admins-role-binding-name", "solution-builder", "The name of the role binding that specifies the namespace admins as subjects.")
+	workflowsCmd.Flags().StringVar(&argoUserInterfaceCR, "user-interface-cluster-role-name", "argo-workflows-namespace", "The name of the cluster role used for Argo Workflow interface access")
+	workflowsCmd.Flags().StringVar(&workflowsCR, "argo-workflows-cluster-role-name", "argo-workflows-workflow", "The name of the role binding that specifies the namespace admins")
+
 	workflowsCmd.MarkFlagRequired("namespace-admin-role-binding")
+	workflowsCmd.MarkFlagRequired("namespace-cluster-role")
+	workflowsCmd.MarkFlagRequired("workflows-cluster-role")
 }
