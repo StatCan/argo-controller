@@ -22,6 +22,10 @@ import (
 	"k8s.io/klog"
 )
 
+var namespaceAdminsRB string
+var argoUserInterfaceCR string
+var workflowsCR string
+
 var workflowsCmd = &cobra.Command{
 	Use:   "workflows",
 	Short: "Configure access control resources for Argo Workflows",
@@ -208,10 +212,10 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 
 	if namespace.Name == "argo-workflows-system" {
 		return []*corev1.ServiceAccount{}, nil
-   }
+	}
 
 	// Find groups in namespace-admins rolebindings
-	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
+	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get(namespaceAdminsRB)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return []*corev1.ServiceAccount{}, nil
@@ -233,10 +237,10 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 		if subject.Kind == "Group" {
 			serviceAccounts = append(serviceAccounts, &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        fmt.Sprintf("argo-workflows-%v", subject.Name),
-					Namespace:   namespace.Name,
+					Name:      fmt.Sprintf("argo-workflows-%v", subject.Name),
+					Namespace: namespace.Name,
 					Annotations: map[string]string{
-						"workflows.argoproj.io/rbac-rule": fmt.Sprintf("'%s' in groups", subject.Name),
+						"workflows.argoproj.io/rbac-rule":            fmt.Sprintf("'%s' in groups", subject.Name),
 						"workflows.argoproj.io/rbac-rule-precedence": "1",
 					},
 				},
@@ -252,7 +256,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 	roleBindings := []*rbacv1.RoleBinding{}
 
 	// Find groups in the namespace admins
-	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get("namespace-admins")
+	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get(namespaceAdminsRB)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return []*rbacv1.RoleBinding{}, nil
@@ -272,7 +276,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: rbacv1.SchemeGroupVersion.Group,
 					Kind:     "ClusterRole",
-					Name:     "argo-workflows-namespace",
+					Name:     argoUserInterfaceCR,
 				},
 				Subjects: []rbacv1.Subject{
 					{
@@ -295,7 +299,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 			Kind:     "ClusterRole",
-			Name:     "argo-workflows-workflow",
+			Name:     workflowsCR,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -337,4 +341,11 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 
 func init() {
 	rootCmd.AddCommand(workflowsCmd)
+	workflowsCmd.Flags().StringVar(&namespaceAdminsRB, "namespace-admins-role-binding-name", "", "The name of the role binding that specifies the namespace admins as subjects.")
+	workflowsCmd.Flags().StringVar(&argoUserInterfaceCR, "user-interface-cluster-role-name", "", "The name of the cluster role used for Argo Workflow interface access")
+	workflowsCmd.Flags().StringVar(&workflowsCR, "argo-workflows-cluster-role-name", "", "The name of the role binding that specifies the namespace admins")
+
+	workflowsCmd.MarkFlagRequired("namespace-admins-role-binding-name")
+	workflowsCmd.MarkFlagRequired("user-interface-cluster-role-name")
+	workflowsCmd.MarkFlagRequired("argo-workflows-cluster-role-name")
 }
