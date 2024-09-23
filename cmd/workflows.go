@@ -75,9 +75,15 @@ var workflowsCmd = &cobra.Command{
 
 				// Generate RBAC
 				roleBindings, err := generateRoleBindings(namespace, roleBindingLister)
+				if err != nil {
+					return err
+				}
 
 				// Generate Secrets
-				secrets := generateSecrets(namespace)
+				secrets, err := generateSecrets(namespace, roleBindingLister)
+				if err != nil {
+					return err
+				}
 
 				// Create
 				for _, serviceAccount := range serviceAccounts {
@@ -320,7 +326,7 @@ func generateRoleBindings(namespace *corev1.Namespace, roleBindingLister rbacv1l
 }
 
 // generateSecrets generates secrets for argo workflows.
-func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
+func generateSecrets(namespace *corev1.Namespace, roleBindingLister rbacv1listers.RoleBindingLister) ([]*corev1.Secret, error) {
 	secrets := []*corev1.Secret{}
 
 	secret := &corev1.Secret{
@@ -341,6 +347,15 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 
 	secrets = append(secrets, secret)
 
+	// Find groups in namespace-admins rolebindings
+	roleBinding, err := roleBindingLister.RoleBindings(namespace.Name).Get(namespaceAdminsRB)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return secrets, nil
+		}
+		return nil, err
+	}
+
 	for _, subject := range roleBinding.Subjects {
 		if subject.Kind == "Group" {
 			secrets = append(secrets, &corev1.Secret{
@@ -356,7 +371,7 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 		}
 	}
 
-	return secrets
+	return secrets, nil
 }
 
 func init() {
