@@ -244,6 +244,11 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 						"workflows.argoproj.io/rbac-rule-precedence": "1",
 					},
 				},
+				Secrets: []corev1.LocalObjectReference{
+					{
+						Name: fmt.Sprintf("argo-workflows-%v", subject.Name),
+				    },
+				},
 			})
 		}
 	}
@@ -335,6 +340,21 @@ func generateSecrets(namespace *corev1.Namespace) []*corev1.Secret {
 	}
 
 	secrets = append(secrets, secret)
+
+	for _, subject := range roleBinding.Subjects {
+		if subject.Kind == "Group" {
+			secrets = append(secrets, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("argo-workflows-%v", subject.Name),
+					Namespace: namespace.Name,
+					Annotations: map[string]string{
+						"kubernetes.io/service-account.name": fmt.Sprintf("argo-workflows-%v", subject.Name),
+					},
+				},
+				Type: corev1.SecretTypeServiceAccountToken,
+			})
+		}
+	}
 
 	return secrets
 }
