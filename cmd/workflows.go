@@ -244,7 +244,7 @@ func generateServiceAccounts(namespace *corev1.Namespace, roleBindingLister rbac
 						"workflows.argoproj.io/rbac-rule-precedence": "1",
 					},
 				},
-				Secrets: []corev1.LocalObjectReference{
+				Secrets: []corev1.ObjectReference{
 					{
 						Name: fmt.Sprintf("argo-workflows-%v", subject.Name),
 				    },
