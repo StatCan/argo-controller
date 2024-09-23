@@ -96,10 +96,10 @@ var workflowsCmd = &cobra.Command{
 						}
 					}
 
-					if !reflect.DeepEqual(serviceAccount.Annotations, currentServiceAccount.Annotations) {
+					if !reflect.DeepEqual(serviceAccount.Annotations, currentServiceAccount.Annotations) || !reflect.DeepEqual(serviceAccount.Secrets, currentServiceAccount.Secrets) {
 						klog.Infof("updating service account %s/%s", serviceAccount.Namespace, serviceAccount.Name)
 						currentServiceAccount.Annotations = serviceAccount.Annotations
-
+						currentServiceAccount.Secrets = serviceAccount.Secrets
 						_, err = kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(context.Background(), currentServiceAccount, metav1.UpdateOptions{})
 						if err != nil {
 							return err
